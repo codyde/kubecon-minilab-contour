@@ -1,6 +1,6 @@
 ---
 description: >-
-    [Contour](https://projectcontour.io) is an Ingress controller for Kubernetes that works by deploying the Envoy proxy as a reverse proxy and load balancer. Contour supports dynamic configuration updates out of the box while maintaining a lightweight profile.
+    Contour is an Ingress controller for Kubernetes that works by deploying the Envoy proxy as a reverse proxy and load balancer. Contour supports dynamic configuration updates out of the box while maintaining a lightweight profile.
 
     Contour also introduces a new ingress API (HTTPProxy) which is implemented via a Custom Resource Definition (CRD). Its goal is to expand upon the functionality of the Ingress API to allow for a richer user experience as well as solve shortcomings in the original design.
 ---
@@ -32,21 +32,21 @@ Execute the following command to get started!
 k8s-start
 ```
 
-When the command completes, we can leverage the following command to get information for our lab
+### Step 2: Copy Information
+
+**Run:**
 
 ```bash
 lab-info
 ```
 
-Copy your External FQDN to your editor window, we will leverage this later!
+Copy down your **Public Hostname** and **Public IP**. We will use this later.
 
 ### Step 2: Install Project Contour
 
 We will start by installing Project Contour in it's default state.
 
-**NOTE - Specific to THIS Lab** - We will need to edit our Service afterwards to enable external IP access. Our instances are not configured for dynamic load balancers. This is not a typical step needed in most environments.
-
-Run:
+**Run:**
 
 ```bash
 kubectl apply -f https://projectcontour.io/quickstart/contour.yaml
@@ -59,3 +59,35 @@ kubectl get pods, svc -A
 ```
 
 Which will list all Pods and Services within our cluster.
+
+**Important Note - Specific to THIS Lab** - We will need to edit our Service afterwards to enable external IP access. Our instances are not configured for dynamic load balancers. This is not a typical step needed in most environments.
+
+```bash
+kubectl edit svc envoy -n projectcontour
+```
+
+Here we will edit our service to allow external access to our Kubernetes Node External IP on Port 80. We will need to force an update to the Envoy proxy service.
+
+```bash
+kubectl apply -f https://gist.githubusercontent.com/codyde/5cc4eea515dba6970ef7e39848b73042/raw/7b203ae926e50d68ff75116212bba4aef327691a/envoy-update.yaml --force
+```
+
+Once this is applied, we will need to patch in our externalIP configuration. **Replace the REPLACEME phrase below with the External IP you wrote down earlier
+
+```bash
+kubectl patch svc envoy -p '{"spec": {"externalIPs": ["REPLACEME"]}}'
+```
+
+Finally, we can confirm our service is configured by running 
+
+```bash
+kubectl get svc -n projectcontour
+```
+
+You should see the envoy service listed running on ports 80 and 443, example output is below!
+
+```bash
+NAME      TYPE        CLUSTER-IP       EXTERNAL-IP    PORT(S)          AGE
+contour   ClusterIP   10.96.102.194    <none>         8001/TCP         11m
+envoy     ClusterIP   10.106.231.185   13.57.49.145   443/TCP,80/TCP   2m41s
+```

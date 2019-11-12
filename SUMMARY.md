@@ -1,4 +1,3 @@
 # Table of contents
 
-* [Initial page](README.md)
-
+* [Introduction to Project Contour](README.md)

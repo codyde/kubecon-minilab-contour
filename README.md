@@ -42,7 +42,7 @@ lab-info
 
 Copy down your **Public Hostname** and **Public IP**. We will use this later.
 
-### Step 2: Install Project Contour
+### Step 3: Install Project Contour
 
 We will start by installing Project Contour in it's default state.
 
@@ -52,15 +52,13 @@ We will start by installing Project Contour in it's default state.
 kubectl apply -f https://projectcontour.io/quickstart/contour.yaml
 ```
 
-To confirm Contour has been installed, we can execute...
+To confirm Contour has been installed, we can execute the following command which will list all Pods and Services within our cluster.
 
 ```bash
 kubectl get pods, svc -A
 ```
 
-Which will list all Pods and Services within our cluster.
-
-**Important Note - Specific to THIS Lab** - We will need to edit our Service afterwards to enable external IP access. Our instances are not configured for dynamic load balancers. This is not a typical step needed in most environments.
+**_Important Note - Specific to This Lab_** - We will need to edit our Service afterwards to enable external IP access. Our instances are not configured for dynamic load balancers. This is not a typical step needed in most environments.
 
 ```bash
 kubectl edit svc envoy -n projectcontour
@@ -72,22 +70,30 @@ Here we will edit our service to allow external access to our Kubernetes Node Ex
 kubectl apply -f https://gist.githubusercontent.com/codyde/5cc4eea515dba6970ef7e39848b73042/raw/7b203ae926e50d68ff75116212bba4aef327691a/envoy-update.yaml --force
 ```
 
-Once this is applied, we will need to patch in our externalIP configuration. **Replace the REPLACEME phrase below with the External IP you wrote down earlier
+Once this is applied, we will need to patch in our externalIP configuration. **Replace the REPLACEME phrase below with the External IP you wrote down earlier**
 
 ```bash
 kubectl patch svc envoy -p '{"spec": {"externalIPs": ["REPLACEME"]}}'
 ```
 
-Finally, we can confirm our service is configured by running 
+Finally, we can confirm our service is configured by running...
 
 ```bash
 kubectl get svc -n projectcontour
 ```
 
-You should see the envoy service listed running on ports 80 and 443, example output is below!
+You should see the envoy service listed running on ports 80 and 443, example output is below. 
 
 ```bash
 NAME      TYPE        CLUSTER-IP       EXTERNAL-IP    PORT(S)          AGE
 contour   ClusterIP   10.96.102.194    <none>         8001/TCP         11m
 envoy     ClusterIP   10.106.231.185   13.57.49.145   443/TCP,80/TCP   2m41s
 ```
+
+If all was configured correct, you'll see the nodes External IP listed for connectivity.
+
+### Step 4: Deploying our Demo Application
+
+### Step 5: Creating Our First HTTPProxy Route
+
+### Step 6: Adding an Additional HTTPProxy Route

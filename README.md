@@ -21,6 +21,8 @@ Your lab environment is hosted within public cloud. It is a single node Kubernet
 * Code Editor Window
 * Web Browser Windows
 
+**Note** - The web browser window does not correctly render in this lab. Please use the browser on your desktop, as well as the External FQDN that you can get using the `lab-info` command.
+
 ## Lab Goals
 
 In this lab, we will be working with a simple HTTPProxy configuration for allowing access to a web based application hosted within a Kubernetes Cluster. We will Install and Configure Project Contour, install our custom application, and configure access to the service which is created as part of the application deployment. We will then add an additional HTTPProxy route to allow access to a secondary service.
@@ -42,7 +44,7 @@ export externalip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 export externalfqdn=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
 ```
 
-**Note:** - You can also see this information by running the following command.
+**Note:** - You can also see this information by running the following command. You will need the external FQDN to use with the web browser on the workstation to view the page that's updated.
 
 ```bash
 lab-info
@@ -132,7 +134,7 @@ This creates an HTTPProxy object that creates a route to the main kubecon-minila
 kubectl get httpproxy
 ```
 
-In Strigo, we have created a browser interface that is pointed to your cloud instance. If you refresh this page, you should see our demo application resolve. This application has several external links on the top (for things like Kubernetes.Academy, etc...), but also has a second set of links on the bottom to other parts of our application. These cards are currently not functional and clicking them will cause the application to fail to load. There are 2 reasons for this...
+If you refresh this page using a web browser on your workstation, you should see our demo application resolve. This application has several external links on the top (for things like Kubernetes.Academy, etc...), but also has a second set of links on the bottom to other parts of our application. These cards are currently not functional and clicking them will cause the application to fail to load. There are 2 reasons for this...
 
 * The core application is responding on the default route ("/"), and the application itself doesn't have anything listening on the other paths listed
 * No other routes are defined to send traffic to other services which may be able to handle the other paths in question (i.e. "/kubecon" or "/kubecon")

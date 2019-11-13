@@ -27,27 +27,30 @@ In this lab, we will be working with a simple HTTPProxy configuration for allowi
 
 ### Step 1: Start Kubernetes
 
-Execute the following command to get started!
+Execute the following command to get started in the lab!
 
 ```bash
 k8s-start
 ```
 
-### Step 2: Copy Information
+### Step 2: Set our Variables
 
-**Run:**
+Execute the following command to save our External IP and External FQDN as variables for usage later.
+
+```bash
+export externalip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+export externalfqdn=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
+```
+
+**Note:** - You can also see this information by running the following command.
 
 ```bash
 lab-info
 ```
 
-Copy down your **Public Hostname** and **Public IP**. We will use this later.
-
 ### Step 3: Install Project Contour
 
 We will start by installing Project Contour in it's default state.
-
-**Run:**
 
 ```bash
 kubectl apply -f https://projectcontour.io/quickstart/contour.yaml
@@ -61,10 +64,9 @@ kubectl get pods, svc -A
 
 **_Important Note - Specific to This Lab_** - We will need to edit our Service afterwards to enable external IP access. Our instances are not configured for dynamic load balancers. This is not a typical step needed in most environments.
 
-We will pull down a local copy of the updated Envoy service YAML and replace the externalIPs section with the external IP for our Kubernetes instance. We will assign an environment variable to the External IP address to make this easier.
+We will pull down a local copy of the updated Envoy service YAML and replace the externalIPs section with the external IP for our Kubernetes instance.
 
 ```bash
-export externalip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 wget https://gist.githubusercontent.com/codyde/5cc4eea515dba6970ef7e39848b73042/raw/e925ca9ec0d623572c1aa768cc0287f904f87b0a/envoy-update.yaml
 sed -i 's/REPLACEME/'"$externalip"'/g' envoy-update.yaml
 kubectl apply -f envoy-update.yaml --force
@@ -98,10 +100,9 @@ This YAML deploys all the necessary pods and services for this mini-lab. Our app
 
 ### Step 5: Creating Our First HTTPProxy
 
-In this step we will create our HTTPProxy object to route to our services. In the following series of commands we will export our external hostname to an environment variable, copy down a HTTPProxy configuration YAML, update it with our External FQDN, and then apply the configuration.
+In this step we will create our HTTPProxy object to route to our services. We will copy down a HTTPProxy configuration YAML, update it with our External FQDN, and then apply the configuration to our Kubernetes environment. 
 
 ```bash
-export externalfqdn=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
 wget https://gist.githubusercontent.com/codyde/b8efa88f24c167403cf9a09e84126462/raw/260ccbe57f36ff9a9dc79c6c3195b85cd59b36d3/contour-route.yaml
 sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route.yaml
 kubectl apply -f contour-route.yaml
@@ -143,7 +144,6 @@ Since our application is broken up into multiple services, let use Contour's HTT
 Execute the following commands to pull down, update, and apply an updated Contour HTTPProxy configuration
 
 ```bash
-export externalfqdn=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
 wget https://gist.githubusercontent.com/codyde/b6c7e4e0a5e96d7daebfd0c0725fc3a0/raw/9d71462dd3d9f9866278b53a41a1e61d4133d853/contour-route-2.yaml
 sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route-2.yaml
 kubectl apply -f contour-route-2.yaml
@@ -174,15 +174,14 @@ spec:
 
 If we refresh our application and select the mini-lab card, it should resolve successfully!
 
-#### Includes and Delegation
+#### Leveraging "Includes"
 
 We can also leverage `include` blocks in our HTTPProxy configuration to bring in additional configurations. Let's use includes to bring in the configurations for our other 2 cards, KubeCon and Build Run Manage.
 
 ```bash
-export externalfqdn=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
-wget https://gist.githubusercontent.com/codyde/b6c7e4e0a5e96d7daebfd0c0725fc3a0/raw/9d71462dd3d9f9866278b53a41a1e61d4133d853/contour-route-2.yaml
-sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route-2.yaml
-kubectl apply -f contour-route-2.yaml
+wget https://gist.githubusercontent.com/codyde/e0c412e100262142ff48752062f01694/raw/f5d8be6a153062351bb540e955a51136cf9d64db/contour-routes-4.yaml
+sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route-4.yaml
+kubectl apply -f contour-route-4.yaml
 ```
 
 This applies the following configuration, consisting of a main HTTPProxy configuration, with 2 included configurations.
@@ -243,3 +242,74 @@ With this configuration applied, all of our card should be active and able to be
 
 ### Step 7: Replacing Our Service (Blue/Green Deployment)
 
+In our final configuration, we will demonstrate how we can use weighting with a HTTPProxy configuration to move traffic to a new service. 
+
+First, lets apply our new pod and service to our cluster
+
+```bash
+kubectl apply -f https://gist.githubusercontent.com/codyde/16562ecdc861875d3131c8d846709710/raw/c74a09a391be71be137ceb19ad235c6a9aa44d2c/contour-app-dark.yaml
+```
+
+Now, we will apply an updated configuration to our original HTTPProxy configuration to allow Contour to route to both services, giving preferred weighting to the new service `kubecon-minilab-app-dark`.
+
+```bash
+wget https://gist.githubusercontent.com/codyde/c0f39f02ceef39dbf50763c8e452b481/raw/9c475c2d0172ff73a036ed5304be6c4983aeabd6/contour-route-5.yaml
+sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route-5.yaml
+kubectl apply -f contour-route-5.yaml
+```
+
+This configuration applies the following HTTPProxy configuration. Take special note of the `weight` keys and their values under the services.
+
+```yaml
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: basic
+spec:
+  virtualhost:
+    fqdn: REPLACEME
+  includes:
+  - name: kubecon
+    namespace: default
+    conditions:
+    - prefix: /kubecon
+  - name: build-run-manage
+    namespace: default
+    conditions:
+    - prefix: /brm
+  routes:
+  - services:
+    - name: kubecon-minilab-app-svc
+      port: 80
+      weight: 10
+    - name: kubecon-minilab-app-dark-svc
+      port: 80
+      weight: 90
+    conditions:
+      - prefix: /
+  - services:
+    - name: kubecon-minilab-ll-svc
+      port: 80
+    conditions:
+      - prefix: /minilabs
+```
+
+### Step 8: Full Service Replacement
+
+In our final exercise, we will move the entire application stack to the "dark" theme by deploying new pods to our environment, using the previous services. We will then remove the weight configuration from our Contour configuration, leaving us with a newly configured application.
+
+First, lets replace the pods in our cluster with the pods for the new application configuration
+
+```bash
+kubectl apply -f https://gist.githubusercontent.com/codyde/a71234857dd35cd31c342f9f0f266523/raw/6020a8098a712144acbca6ea42c792907b5cf942/dark-pods-and-services.yaml
+```
+
+And now we will update our Contour configuration to remove the weighting
+
+```bash
+wget https://gist.githubusercontent.com/codyde/052c866f98324394861bab2b067c270e/raw/7117d422cfa46aff087abe6411bd24ef1d205f20/contour-route-6.yaml
+sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route-6.yaml
+kubectl apply -f contour-route-6.yaml
+```
+
+If we refresh our page with these changes applied, we will see the final state of our application, configured in the dark theme! This lab is now complete!

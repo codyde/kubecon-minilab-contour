@@ -179,7 +179,7 @@ If we refresh our application and select the mini-lab card, it should resolve su
 We can also leverage `include` blocks in our HTTPProxy configuration to bring in additional configurations. Let's use includes to bring in the configurations for our other 2 cards, KubeCon and Build Run Manage.
 
 ```bash
-wget https://gist.githubusercontent.com/codyde/e0c412e100262142ff48752062f01694/raw/f5d8be6a153062351bb540e955a51136cf9d64db/contour-routes-4.yaml
+wget https://gist.githubusercontent.com/codyde/e0c412e100262142ff48752062f01694/raw/5ed34ec66207452b5258050131c07d02ee54685f/contour-route-4.yaml
 sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route-4.yaml
 kubectl apply -f contour-route-4.yaml
 ```
@@ -307,7 +307,7 @@ kubectl apply -f https://gist.githubusercontent.com/codyde/a71234857dd35cd31c342
 And now we will update our Contour configuration to remove the weighting
 
 ```bash
-wget https://gist.githubusercontent.com/codyde/052c866f98324394861bab2b067c270e/raw/7117d422cfa46aff087abe6411bd24ef1d205f20/contour-route-6.yaml
+wget https://gist.githubusercontent.com/codyde/052c866f98324394861bab2b067c270e/raw/79a3b2911bf22cafd70d371b0b7f67262568771e/contour-route-6.yaml
 sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route-6.yaml
 kubectl apply -f contour-route-6.yaml
 ```

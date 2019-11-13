@@ -9,8 +9,9 @@ description: >-
 
 ### Key Capabilities
 
-* **Secure Ingress Delegation** - Ingress Delegation allows multiple cluster operator teams to self-manage service access across multiple namespaces in a cluster. This functionality protects users from assigning the same path or route configuration to different services which could cause significant outages.
+* **Secure Ingress Delegation** - Ingress Delegation allows cluster operator teams to self-manage service access across multiple namespaces in a cluster. Enabled by limiting which namespaces have access to configure virtualhosts and TLS credentials.
 * **Dynamic Reconfiguration** - Updates to Envoy configurations can be applied "live" without the need to restart a load balancer.
+* **Enhanced Load Balancing Capabilities** - Load balance multiple services from a single route, as well as allow service weighting and other load balancing strategies without leveraging annotations.
 
 ### Environment Overview
 
@@ -60,29 +61,22 @@ kubectl get pods, svc -A
 
 **_Important Note - Specific to This Lab_** - We will need to edit our Service afterwards to enable external IP access. Our instances are not configured for dynamic load balancers. This is not a typical step needed in most environments.
 
-```bash
-kubectl edit svc envoy -n projectcontour
-```
-
-Here we will edit our service to allow external access to our Kubernetes Node External IP on Port 80. We will need to force an update to the Envoy proxy service.
+We will pull down a local copy of the updated Envoy service YAML and replace the externalIPs section with the external IP for our Kubernetes instance. We will assign an environment variable to the External IP address to make this easier.
 
 ```bash
-kubectl apply -f https://gist.githubusercontent.com/codyde/5cc4eea515dba6970ef7e39848b73042/raw/7b203ae926e50d68ff75116212bba4aef327691a/envoy-update.yaml --force
+export externalip=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+wget https://gist.githubusercontent.com/codyde/5cc4eea515dba6970ef7e39848b73042/raw/e925ca9ec0d623572c1aa768cc0287f904f87b0a/envoy-update.yaml
+sed -i 's/REPLACEME/'"$externalip"'/g' envoy-update.yaml
+kubectl apply -f envoy-update.yaml --force
 ```
 
-Once this is applied, we will need to patch in our externalIP configuration. **Replace the REPLACEME phrase below with the External IP you wrote down earlier**
-
-```bash
-kubectl patch svc envoy -p '{"spec": {"externalIPs": ["REPLACEME"]}}'
-```
-
-Finally, we can confirm our service is configured by running...
+After these are applied, we can confirm our service has been updated with the external IP by entering...
 
 ```bash
 kubectl get svc -n projectcontour
 ```
 
-You should see the envoy service listed running on ports 80 and 443, example output is below. 
+You should see the envoy service listed running on ports 80 and 443, example output is below (your IP will be different).
 
 ```bash
 NAME      TYPE        CLUSTER-IP       EXTERNAL-IP    PORT(S)          AGE
@@ -96,4 +90,24 @@ If all was configured correct, you'll see the nodes External IP listed for conne
 
 ### Step 5: Creating Our First HTTPProxy Route
 
+In this step we will create our HTTPProxy object to route to our services. In the following series of commands we will export our external hostname to an environment variable, copy down a HTTPProxy configuration YAML, update it with our External FQDN, and then apply the configuration.
+
+Get a local copy of the HTTPProxy configuration YAML.
+
+```bash
+export externalfqdn=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
+wget https://gist.githubusercontent.com/codyde/b8efa88f24c167403cf9a09e84126462/raw/97055c3dc5c1419303bf1f422eff546e9ff0b6d0/contour-route.yaml
+sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route.yaml
+kubectl apply -f contour-route.yaml
+```
+
 ### Step 6: Adding an Additional HTTPProxy Route
+
+We will expand on our existing route by adding another service to the list
+
+```bash
+
+```
+
+### Step 7: Load Balance Between 2 Services
+

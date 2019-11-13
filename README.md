@@ -7,7 +7,7 @@ description: >-
 
 # Project Contour: Introduction
 
-### Key Capabilities
+## Key Capabilities
 
 * **Secure Ingress Delegation** - Ingress Delegation allows cluster operator teams to self-manage service access across multiple namespaces in a cluster. Enabled by limiting which namespaces have access to configure virtualhosts and TLS credentials.
 * **Dynamic Reconfiguration** - Updates to Envoy configurations can be applied "live" without the need to restart a load balancer.
@@ -100,7 +100,7 @@ This YAML deploys all the necessary pods and services for this mini-lab. Our app
 
 ### Step 5: Creating Our First HTTPProxy
 
-In this step we will create our HTTPProxy object to route to our services. We will copy down a HTTPProxy configuration YAML, update it with our External FQDN, and then apply the configuration to our Kubernetes environment. 
+In this step we will create our HTTPProxy object to route to our services. We will copy down a HTTPProxy configuration YAML, update it with our External FQDN, and then apply the configuration to our Kubernetes environment.
 
 ```bash
 wget https://gist.githubusercontent.com/codyde/b8efa88f24c167403cf9a09e84126462/raw/260ccbe57f36ff9a9dc79c6c3195b85cd59b36d3/contour-route.yaml
@@ -242,7 +242,7 @@ With this configuration applied, all of our card should be active and able to be
 
 ### Step 7: Replacing Our Service (Blue/Green Deployment)
 
-In our final configuration, we will demonstrate how we can use weighting with a HTTPProxy configuration to move traffic to a new service. 
+In our final configuration, we will demonstrate how we can use weighting with a HTTPProxy configuration to move traffic to a new service.
 
 First, lets apply our new pod and service to our cluster
 

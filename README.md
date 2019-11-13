@@ -91,17 +91,18 @@ If all was configured correct, you'll see the nodes External IP listed for conne
 Our application is a simple single pod application running in Flask. We can deploy it using the below command.
 
 ```bash
-kubectl apply -f https://gist.githubusercontent.com/codyde/a6f67354431de6c3f9a0a0dd1cceada5/raw/36cdf40ec72ce86048a52b08cb0adc6fe9e12dc8/kubecon-base.yaml
+kubectl apply -f https://gist.githubusercontent.com/codyde/a6f67354431de6c3f9a0a0dd1cceada5/raw/7d752bbcc0f085026010314d821b764608c06d4c/kubecon-base.yaml
 ```
-This YAML deploys the pod and creates a service, however this service is not exposed. We will use Contour to create an HTTPProxy route inbound to the service
 
-### Step 5: Creating Our First HTTPProxy Route
+This YAML deploys all the necessary pods and services for this mini-lab. Our application consists of 4 pods, and 4 services. These services are not exposed externally. We will use Contour to create an HTTPProxy inbound to the various services. This enables us to leverage a single externally exposed endpoint (Contour) to control access to our application!
+
+### Step 5: Creating Our First HTTPProxy
 
 In this step we will create our HTTPProxy object to route to our services. In the following series of commands we will export our external hostname to an environment variable, copy down a HTTPProxy configuration YAML, update it with our External FQDN, and then apply the configuration.
 
 ```bash
 export externalfqdn=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
-wget https://gist.githubusercontent.com/codyde/b8efa88f24c167403cf9a09e84126462/raw/741a756f89eae0d29f04302450d7ffbc9fba505c/contour-route.yaml
+wget https://gist.githubusercontent.com/codyde/b8efa88f24c167403cf9a09e84126462/raw/260ccbe57f36ff9a9dc79c6c3195b85cd59b36d3/contour-route.yaml
 sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route.yaml
 kubectl apply -f contour-route.yaml
 ```
@@ -112,37 +113,133 @@ If we inspect the `contour-route.yaml` file, we see the following details...
 apiVersion: projectcontour.io/v1
 kind: HTTPProxy
 metadata:
-  name: kubecon
-  namespace: default
+  name: basic
 spec:
   virtualhost:
-    fqdn: your.instance.fqdn
+    fqdn: REPLACEME
   routes:
-    - conditions:
+  - services:
+    - name: kubecon-minilab-app-svc
+      port: 80
+    conditions:
       - prefix: /
-      services:
-        - name: kubecon-minilab-svc
-          port: 80
 ```
 
-This creates an HTTPProxy object that creates a route to the kubecon-minilab-svc on port 80. Running he below command allows us to observe any other HTTPProxy objects created in our environment.
+This creates an HTTPProxy object that creates a route to the main kubecon-minilab-app-svc on port 80. Running the below command allows us to observe any other HTTPProxy objects created in our environment.
 
 ```bash
 kubectl get httpproxy
 ```
 
-In Strigo, we have created a browser interface that is pointed to your cloud instance. If you refresh this page, you should see our demo application resolve. This application has several external links on the top (for things like Kubernetes.Academy, etc...), but also has a second set of links below it to other parts of our application. These links are currently not functional and clicking them will cause the application to fail to load. There are 2 reasons for this... 
+In Strigo, we have created a browser interface that is pointed to your cloud instance. If you refresh this page, you should see our demo application resolve. This application has several external links on the top (for things like Kubernetes.Academy, etc...), but also has a second set of links on the bottom to other parts of our application. These cards are currently not functional and clicking them will cause the application to fail to load. There are 2 reasons for this...
 
 * The core application is responding on the default route ("/"), and the application itself doesn't have anything listening on the other paths listed
-* No other routes are defined to send traffic to other services which may be able to handle the other paths in question (i.e. "/kubecon" or "/marketing")
+* No other routes are defined to send traffic to other services which may be able to handle the other paths in question (i.e. "/kubecon" or "/kubecon")
 
-Since our application is broken up into multiple services, let's add additional pods, services, and Contour HTTPProxy routes to support the connectivity
+Since our application is broken up into multiple services, let use Contour's HTTPProxy CRD to route to the services we created in the beginning.
 
-### Step 6: Adding Additional HTTPProxy Routes
+### Step 6: Exposing Additional Routes with HTTPProxy
+
+Execute the following commands to pull down, update, and apply an updated Contour HTTPProxy configuration
 
 ```bash
-
+export externalfqdn=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
+wget https://gist.githubusercontent.com/codyde/b6c7e4e0a5e96d7daebfd0c0725fc3a0/raw/9d71462dd3d9f9866278b53a41a1e61d4133d853/contour-route-2.yaml
+sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route-2.yaml
+kubectl apply -f contour-route-2.yaml
 ```
+
+This deploys the following configuration
+
+```yaml
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: basic
+spec:
+  virtualhost:
+    fqdn: REPLACEME
+  routes:
+  - services:
+    - name: kubecon-minilab-app-svc
+      port: 80
+    conditions:
+      - prefix: /
+  - services:
+    - name: kubecon-minilab-ll-svc
+      port: 80
+    conditions:
+      - prefix: /minilabs
+```
+
+If we refresh our application and select the mini-lab card, it should resolve successfully!
+
+#### Includes and Delegation
+
+We can also leverage `include` blocks in our HTTPProxy configuration to bring in additional configurations. Let's use includes to bring in the configurations for our other 2 cards, KubeCon and Build Run Manage.
+
+```bash
+export externalfqdn=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)
+wget https://gist.githubusercontent.com/codyde/b6c7e4e0a5e96d7daebfd0c0725fc3a0/raw/9d71462dd3d9f9866278b53a41a1e61d4133d853/contour-route-2.yaml
+sed -i 's/REPLACEME/'"$externalfqdn"'/g' contour-route-2.yaml
+kubectl apply -f contour-route-2.yaml
+```
+
+This applies the following configuration, consisting of a main HTTPProxy configuration, with 2 included configurations.
+
+```yaml
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: basic
+spec:
+  virtualhost:
+    fqdn: REPLACEME
+  includes:
+  - name: kubecon
+    namespace: default
+    conditions:
+    - prefix: /kubecon
+  - name: build-run-manage
+    namespace: default
+    conditions:
+    - prefix: /brm
+  routes:
+  - services:
+    - name: kubecon-minilab-app-svc
+      port: 80
+    conditions:
+      - prefix: /
+  - services:
+    - name: kubecon-minilab-ll-svc
+      port: 80
+    conditions:
+      - prefix: /minilabs
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: kubecon
+  namespace: default
+spec:
+  routes:
+    - services:
+        - name: kubecon-minilab-kc-svc
+          port: 80
+---
+apiVersion: projectcontour.io/v1
+kind: HTTPProxy
+metadata:
+  name: build-run-manage
+  namespace: default
+spec:
+  routes:
+    - services:
+        - name: kubecon-minilab-brm-svc
+          port: 80
+```
+
+With this configuration applied, all of our card should be active and able to be clicked through!
 
 ### Step 7: Replacing Our Service (Blue/Green Deployment)
 

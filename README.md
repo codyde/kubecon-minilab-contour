@@ -59,7 +59,9 @@ kubectl apply -f https://projectcontour.io/quickstart/contour.yaml
 To confirm Contour has been installed, we can execute the following command which will list all Pods and Services within our cluster.
 
 ```bash
-kubectl get pods, svc -A
+kubectl get pods -A
+kubectl get svc -A 
+
 ```
 
 **_Important Note - Specific to This Lab_** - We will need to edit our Service afterwards to enable external IP access. Our instances are not configured for dynamic load balancers. This is not a typical step needed in most environments.
